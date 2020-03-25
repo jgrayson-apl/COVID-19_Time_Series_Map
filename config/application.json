@@ -1,0 +1,27 @@
+{
+  "title": "COVID-19 Time Series Map",
+  "appid": "",
+  "group": "",
+  "webmap": "d2bc0352fb614d1d9d7ee9e289cd80a6",
+  "webscene": "",
+  "portalUrl": "https://www.arcgis.com",
+  "oauthappid": "6NsKkXvcADmfBicB",
+  "proxyUrl": "https://apl.esri.com/proxy/DotNet/proxy.ashx",
+  "units": "dual",
+  "helperServices": {
+    "geometry": {
+      "url": null
+    },
+    "printTask": {
+      "url": null
+    },
+    "elevationSync": {
+      "url": null
+    },
+    "geocode": [
+      {
+        "url": null
+      }
+    ]
+  }
+}

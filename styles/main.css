@@ -1,0 +1,256 @@
+/*@import url('https://fonts.googleapis.com/css?family=Architects+Daughter');*/
+
+html,
+body {
+  margin                   : 0;
+  padding                  : 0;
+  width                    : 100%;
+  height                   : 100%;
+  font-size                : 100%;
+  -webkit-text-size-adjust : 100%;
+  -moz-text-size-adjust    : 100%;
+  -ms-text-size-adjust     : 100%;
+  font-family              : Avenir Next, Helvetica Nue, sans-serif;
+  /*font-family              : 'Architects Daughter', Avenir Next, Helvetica Nue, sans-serif;*/
+}
+
+body {
+  display          : flex;
+  flex-direction   : column;
+  background-color : #fff;
+}
+
+body * {
+  outline : none;
+}
+
+#header-panel {
+  flex-shrink : 0;
+  flex-grow   : 0;
+  min-width   : 0;
+  min-height  : 0;
+  z-index     : 99;
+  box-shadow  : 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+#main-container {
+  flex-shrink    : 1;
+  flex-grow      : 1;
+  min-width      : 0;
+  min-height     : 0;
+  display        : flex;
+  flex-direction : column;
+}
+
+#top-container {
+  flex-shrink    : 0;
+  flex-grow      : 0;
+  min-width      : 0;
+  min-height     : 0;
+  display        : flex;
+  flex-direction : column;
+}
+
+#stats-panel {
+  flex-shrink    : 0;
+  flex-grow      : 0;
+  min-width      : 0;
+  min-height     : 0;
+  display        : flex;
+  flex-direction : row;
+  /*justify-content : space-around;*/
+  align-items    : center;
+}
+
+.stat-section {
+  flex-basis  : 0;
+  flex-shrink : 1;
+  flex-grow   : 1;
+  min-width   : 0;
+  min-height  : 0;
+}
+
+.sub-stat-section {
+  /*display: inline-block;*/
+}
+
+.sub-stat-section > span {
+  display : inline-block;
+}
+
+.sub-stat-section > span:nth-child(1) {
+  text-align : right;
+  width      : 50%;
+}
+
+.sub-stat-section > span:nth-child(2) {
+  text-align : right;
+  width      : 15%;
+}
+
+#center-container {
+  flex-shrink    : 1;
+  flex-grow      : 1;
+  min-width      : 0;
+  min-height     : 0;
+  display        : flex;
+  flex-direction : row;
+}
+
+#legend-panel {
+  flex-shrink    : 0;
+  flex-grow      : 0;
+  min-width      : 0;
+  min-height     : 0;
+  display        : flex;
+  flex-direction : column;
+  box-shadow     : 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+#legend-container {
+  flex-shrink : 0;
+  flex-grow   : 0;
+  min-width   : 0;
+  min-height  : 0;
+}
+
+.esri-legend {
+  /*  */
+}
+
+/*.esri-legend--card__service {
+  border-left : none;
+}*/
+
+/*.esri-legend--card__service-content {
+  flex-direction : column;
+}*/
+
+/*.esri-legend--card__section {
+  border-left   : none;
+  border-bottom : 1px solid rgba(110, 110, 110, 0.3);
+}*/
+
+#country-panel {
+  width       : 300px;
+  flex-shrink : 0;
+  flex-grow   : 0;
+  min-width   : 0;
+  min-height  : 0;
+  overflow-y  : auto;
+  box-shadow  : 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.table-blue {
+  border : 1px solid #004575;
+}
+
+.table-blue > thead {
+  background-color : #004575;
+  border           : none;
+  border-bottom    : 1px solid #004575;
+  color            : #fff;
+}
+
+.table-blue th, .table-blue td {
+  border-left  : 1px solid #004575;
+  border-right : 1px solid #004575;
+}
+
+.table-blue tr {
+  border-bottom : 1px solid #004575;
+}
+
+#view-panel {
+  flex-shrink    : 1;
+  flex-grow      : 1;
+  min-width      : 0;
+  min-height     : 0;
+  display        : flex;
+  flex-direction : column;
+  /*border-color   : #99b5c8;*/
+  box-shadow     : 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+#view-node {
+  flex-shrink      : 1;
+  flex-grow        : 1;
+  min-width        : 0;
+  min-height       : 0;
+  background-color : #99b5c8;
+}
+
+#user-thumb-node {
+  height         : 36px;
+  border-radius  : 18px;
+  vertical-align : middle;
+}
+
+.top-nav-link:hover, .top-nav-link:focus {
+  color               : #fff;
+  border-bottom-color : #fff;
+}
+
+.top-nav-title {
+  font-size : 25pt !important;
+}
+
+.esri-widget {
+  /*font-family : 'Architects Daughter', Avenir Next, Helvetica Nue, sans-serif;*/
+}
+
+.esri-widget--button {
+  color            : #fff !important;
+  background-color : #004575 !important;
+}
+
+.esri-attribution {
+  color            : #fff !important;
+  background-color : rgba(0, 69, 117, 0.5) !important;
+}
+
+.esri-attribution:hover {
+  background-color : rgba(0, 69, 117, 0.8) !important;
+}
+
+.view-loading-node {
+  box-shadow : none !important;
+}
+
+.view-loading-node .loader-text {
+  color       : #ffffff !important;
+  padding-top : 3em !important;
+}
+
+@keyframes load {
+  0%, 80%, 100% {
+    opacity    : .75;
+    box-shadow : 0 0 #ffffff;
+    height     : 2rem
+  }
+
+  40% {
+    opacity    : 1;
+    box-shadow : 0 -0.5rem #ffffff;
+    height     : 2.5rem
+  }
+}
+
+.loader-bars:before,
+.loader-bars:after,
+.loader-bars {
+  background : #ffffff;
+}
+
+.side-nav-link:last-of-type {
+  border-bottom : solid 1px #efefef;
+}
+
+th.stat-cell > div{
+  text-align : center;
+}
+
+td.stat-cell > div{
+  text-align : right;
+}
+

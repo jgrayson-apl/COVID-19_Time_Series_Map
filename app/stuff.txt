@@ -1,0 +1,144 @@
+/*initializeCSVs: function(view){
+
+      const legendExpand = new Expand({
+        view: view,
+        content: new Legend({ view: view, style: { type: "card", layout: "side-by-side" } }),
+        expandIconClass: "esri-icon-layer-list",
+        expandTooltip: "Legend"
+      });
+      view.ui.add(legendExpand, "bottom-left");
+
+
+      const csvDataSourceInfos = [
+        {
+          title: "Recovered",
+          copyright: "Johns Hopkins University",
+          schemeName: "Green 7",
+          url: "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Recovered.csv"
+        },
+        {
+          title: "Deaths",
+          copyright: "Johns Hopkins University",
+          schemeName: "Red 7",
+          url: "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Deaths.csv"
+        },
+        {
+          title: "Confirmed",
+          copyright: "Johns Hopkins University",
+          schemeName: "Orange 6",
+          url: "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv"
+        }
+      ];
+
+      const nonDateFields = ["Province/State", "Country/Region", "Long", "Lat"];
+      const dateFieldNames = [];
+
+      const layerLoadedHandles = csvDataSourceInfos.map(csvDataSourceInfo => {
+
+        const csvLayer = new CSVLayer({
+          ...csvDataSourceInfo,
+          longitudeField: "Long",
+          latitudeField: "Lat",
+          popupEnabled: true,
+          opacity: 0.6
+        });
+        view.map.add(csvLayer);
+
+        return csvLayer.load().then(() => {
+
+          csvLayer.fields.forEach(field => {
+            if((field.type !== "oid") && (!nonDateFields.includes(field.name)) && (!dateFieldNames.includes(field.name))){
+              dateFieldNames.push(field.name);
+            }
+          });
+
+          return csvLayer;
+        });
+      });
+      promiseUtils.eachAlways(layerLoadedHandles).then(layerLoadedResponses => {
+
+        const datesList = document.getElementById("dates-list");
+
+        const csvLayers = layerLoadedResponses.map(layerLoadedResponse => {
+          return layerLoadedResponse.value;
+        });
+
+        const colorSchemesByLayer = csvLayers.reduce((list, csvLayer) => {
+          return list.set(csvLayer, colorSchemes.getSchemeByName({
+            name: csvLayer.schemeName,
+            geometryType: "point",
+            basemapTheme: "dark",
+            theme: "high-to-low"
+          }));
+        }, new Map());
+
+        // const allColorSchemes = colorSchemes.getSchemes({ view: view, basemapTheme: "dark", geometryType: "point", theme: "high-to-low" });
+        // console.info(allColorSchemes);
+
+        const setDateRenderer = (dateFieldName) => {
+
+          datesList.classList.add("btn-disabled");
+
+          const updateHandles = csvLayers.map(csvLayer => {
+
+            return colorAndSizeRendererCreator.createContinuousRenderer({
+              view: view,
+              layer: csvLayer,
+              field: dateFieldName,
+              //sqlWhere: csvLayer.definitionExpression,
+              defaultSymbolEnabled: true,
+              sizeOptimizationEnabled: true,
+              colorScheme: colorSchemesByLayer.get(csvLayer)
+            }).then(response => {
+
+              csvLayer.renderer = response.renderer;
+
+              csvLayer.definitionExpression = `${dateFieldName} > 0`;
+
+              //console.info(csvLayer.renderer);
+            });
+          });
+
+          promiseUtils.eachAlways(updateHandles).then(() => {
+            datesList.classList.remove("btn-disabled");
+          });
+        };
+
+
+        /!*dateFieldNames.forEach(dateFieldName => {
+          const dateBtn = domConstruct.create("button", { className: "btn btn-grouped btn-clear-white", innerHTML: dateFieldName }, datesList);
+          dateBtn.addEventListener("click", () => { setDateRenderer(dateFieldName); });
+        });*!/
+
+        const months = locale.getNames("months", "abbr");
+
+        const slider = new Slider({
+          container: datesList,
+          min: 0,
+          max: (dateFieldNames.length - 1),
+          tickConfigs: [{
+            mode: "count",
+            values: dateFieldNames.length,
+            labelsVisible: true,
+            tickCreatedFunction: function(initialValue, tickElement, labelElement){
+              labelElement.classList.add("small-labels");
+            }
+          }],
+          steps: 1,
+          values: [0],
+          snapOnClickEnabled: true,
+          labelsVisible: true,
+          labelFormatFunction: (value, type, index) => {
+            const dataDate = new Date(dateFieldNames[value]);
+            return `${dataDate.getUTCDate()} ${months[dataDate.getUTCMonth()]} `
+          }
+        });
+        slider.watch("values", values => {
+          setDateRenderer(dateFieldNames[values[0]]);
+        });
+        setDateRenderer(dateFieldNames[slider.values[0]]);
+
+
+      });
+
+    }*/
