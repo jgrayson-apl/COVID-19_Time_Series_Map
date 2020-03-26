@@ -276,6 +276,8 @@ define([
       });
       countriesLayer.load().then(() => {
         view.whenLayerView(countriesLayer).then(countriesLayerView => {
+          // INITIAL COUNTRY FILTER //
+          countriesLayerView.effect = { filter: { where: '1=1' }, includedEffect: "opacity(10%)" };
 
           const casesLayer = view.map.layers.find(layer => {
             return (layer.title === "COVID-19 Cases");
@@ -424,8 +426,7 @@ define([
               });
 
               watchUtils.whenFalseOnce(casesLayerView, 'updating', () => {
-                timeSlider.play();
-                //updateCaseTypeStats(timeSlider.timeExtent);
+                setTimeout(() => { timeSlider.play(); }, 2500);
               });
 
             });
