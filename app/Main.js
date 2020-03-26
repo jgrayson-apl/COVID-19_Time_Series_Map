@@ -416,7 +416,7 @@ define([
 
                 view.timeExtent = {
                   start: timeExtent.start,
-                  end: date.add(timeExtent.start, 'hour', 23)
+                  end: date.add(timeExtent.start, 'hour', 22)
                 };
 
                 updateCaseTypeStats();
