@@ -258,7 +258,6 @@ define([
 
 
       const legend = new Legend({
-        // container: "legend-container",
         view: view,
         style: { type: "card", layout: "stack" }
       });
@@ -269,7 +268,6 @@ define([
         expandTooltip: "Legend"
       });
       view.ui.add(legendExpand, "bottom-left");
-
 
       const countriesLayer = view.map.layers.find(layer => {
         return (layer.title === "World Countries");
@@ -283,25 +281,9 @@ define([
             return (layer.title === "COVID-19 Cases");
           });
           casesLayer.load().then(() => {
+            casesLayer.set({ copyright: "Johns Hopkins University", outFields: ["*"] });
 
-            casesLayer.set({
-              copyright: "Johns Hopkins University",
-              outFields: ["*"]/*,
-              labelsVisible: true,
-              labelingInfo: [
-                {
-                  where: `(Confirmed > 10000)`,
-                  labelExpressionInfo: { expression: `$feature.Confirmed` },
-                  labelPlacement: "center-center",
-                  symbol: {
-                    type: "text",
-                    color: "#000000",
-                    font: { size: 15, family: 'Avenir Next LT Pro', style: 'normal', weight: 'bold' }
-                  }
-                }
-              ]*/
-            });
-
+            console.info('timeInfo: ', casesLayer.timeInfo);
 
             view.whenLayerView(casesLayer).then(casesLayerView => {
 
