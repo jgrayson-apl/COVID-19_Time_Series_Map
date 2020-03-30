@@ -43,17 +43,24 @@ define([
   "esri/geometry/Extent",
   "esri/geometry/Multipoint",
   "esri/Graphic",
-  "esri/widgets/Slider",
   "esri/widgets/TimeSlider",
   "esri/widgets/Home",
   "esri/widgets/LayerList",
   "esri/widgets/Legend",
-  "esri/widgets/Expand"
+  "esri/widgets/Expand",
+  "dojox/charting/Chart",
+  "dojox/charting/axis2d/Default",
+  "dojox/charting/plot2d/Grid",
+  "dojox/charting/themes/Bahamation",
+  "dojox/charting/plot2d/StackedColumns",
+  "dojox/charting/plot2d/Indicator",
+  "dojox/charting/action2d/Tooltip",
 ], function(calcite, declare, ApplicationBase, i18n, itemUtils, domHelper,
             Color, colors, number, date, locale, on, query, dom, domClass, domConstruct,
             IdentityManager, Evented, watchUtils, promiseUtils, Portal,
             Layer, CSVLayer, colorSchemes, colorAndSizeRendererCreator, Extent, Multipoint,
-            Graphic, Slider, TimeSlider, Home, LayerList, Legend, Expand){
+            Graphic, TimeSlider, Home, LayerList, Legend, Expand,
+            Chart, Default, Grid, ChartTheme, StackedColumns, Indicator, ChartTooltip){
 
   return declare([Evented], {
 
@@ -154,25 +161,6 @@ define([
           position: "top-center"
         };
 
-        // SEARCH //
-        /*const search = new Search({ view: view, searchTerm: this.base.config.search || "" });
-        const searchExpand = new Expand({
-          view: view,
-          content: search,
-          expandIconClass: "esri-icon-search",
-          expandTooltip: "Search"
-        });
-        view.ui.add(searchExpand, { position: "top-left", index: 0 });*/
-
-        // BASEMAPS //
-        /*const basemapGalleryExpand = new Expand({
-          view: view,
-          content: new BasemapGallery({ view: view }),
-          expandIconClass: "esri-icon-basemap",
-          expandTooltip: "Basemap"
-        });
-        view.ui.add(basemapGalleryExpand, { position: "top-left", index: 1 });*/
-
         // HOME //
         const home = new Home({ view: view });
         view.ui.add(home, { position: "top-left", index: 0 });
@@ -257,17 +245,7 @@ define([
     applicationReady: function(view){
 
 
-      const legend = new Legend({
-        view: view,
-        style: { type: "card", layout: "stack" }
-      });
-      const legendExpand = new Expand({
-        view: view,
-        content: legend,
-        expandIconClass: "esri-icon-layer-list",
-        expandTooltip: "Legend"
-      });
-      view.ui.add(legendExpand, "bottom-left");
+      const legend = new Legend({ container: 'legend-container', view: view });
 
       const countriesLayer = view.map.layers.find(layer => {
         return (layer.title === "World Countries");
@@ -282,8 +260,7 @@ define([
           });
           casesLayer.load().then(() => {
             casesLayer.set({ copyright: "Johns Hopkins University", outFields: ["*"] });
-
-            console.info('timeInfo: ', casesLayer.timeInfo);
+            //console.info('timeInfo: ', casesLayer.timeInfo);
 
             view.whenLayerView(casesLayer).then(casesLayerView => {
 
@@ -294,6 +271,64 @@ define([
               const allCountriesList = document.getElementById("country-list");
               const dateLabel = document.getElementById("date-label");
               const dateFormat = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+
+              const updateCasesChart = () => {
+
+                const countryQuery = casesLayerView.createQuery();
+                countryQuery.set({
+                  extent: view.extent,
+                  groupByFieldsForStatistics: ["date"],
+                  orderByFields: ['date ASC'],
+                  outStatistics: [
+                    { statisticType: "sum", onStatisticField: "confirmed", outStatisticFieldName: "confirmed" },
+                    { statisticType: "sum", onStatisticField: "deaths", outStatisticFieldName: "deaths" },
+                    { statisticType: "sum", onStatisticField: "recovered", outStatisticFieldName: "recovered" }
+                  ]
+                });
+                casesLayer.queryFeatures(countryQuery).then(totalCountByDateFS => {
+                  //console.info("totalCountByDateFS: ", totalCountByDateFS);
+
+                  const chartData = totalCountByDateFS.features.reduce((data, feature, fetureIdx) => {
+
+                    const shortDateLabel = new Date(feature.attributes.date).toLocaleDateString('default', { month: 'short', day: 'numeric' });
+                    const longDateLabel = new Date(feature.attributes.date).toLocaleDateString('default', { month: 'long', day: 'numeric' });
+
+                    const tooltip = `${longDateLabel}
+                                      <br>Deaths: ${feature.attributes.deaths.toLocaleString()}                                      
+                                      <br>Confirmed: ${feature.attributes.confirmed.toLocaleString()}
+                                      <br>Recovered: ${feature.attributes.recovered.toLocaleString()}`;
+
+                    const info = {
+                      x: fetureIdx,
+                      label: shortDateLabel,
+                      tooltip: tooltip
+                    };
+
+                    data.confirmed.push({
+                      ...info,
+                      y: feature.attributes.confirmed
+                    });
+
+                    data.deaths.push({
+                      ...info,
+                      y: feature.attributes.deaths
+                    });
+
+                    data.recovered.push({
+                      ...info,
+                      y: feature.attributes.recovered
+                    });
+
+                    return data;
+                  }, { confirmed: [], deaths: [], recovered: [] });
+
+                  this.initializeChart(chartData);
+                });
+
+              };
+              updateCasesChart();
+
 
               const updateCaseTypeStats = () => {
 
@@ -382,6 +417,7 @@ define([
                   }
                 });
 
+
               };
 
               const timeInfo = casesLayer.timeInfo;
@@ -391,7 +427,7 @@ define([
               const timeSlider = new TimeSlider({
                 container: sliderContainer,
                 mode: "instant",
-                playRate: 500,
+                playRate: 1500,
                 fullTimeExtent: animationTimeExtent,
                 stops: { interval: { unit: 'days', value: 1 } },
                 values: [firstDate]
@@ -417,7 +453,98 @@ define([
         });
       });
 
+    },
 
+    /**
+     *
+     * @param chartData
+     */
+    initializeChart: function(chartData){
+      //console.info(chartData);
+
+      const fontColor = "#004575";
+      const lineStroke = { color: "#999999", width: 1.0, length: 5 };
+
+      const casesChart = new Chart("chart-node", { margins: { l: 0, t: 0, r: 0, b: 0 } });
+      casesChart.setTheme(ChartTheme);
+      casesChart.fill = casesChart.theme.plotarea.fill = "transparent";
+
+      casesChart.addAxis("y", {
+        natural: true,
+        includeZero: true,
+        fixUpper: "major",
+        vertical: true,
+        minorTicks: false,
+        majorTick: lineStroke,
+        stroke: lineStroke,
+        font: "normal normal normal 9pt Avenir Next",
+        fontColor: fontColor,
+        labelFunc: (text, value, precision) => {
+          let label = text;
+          switch(true){
+            case (value === 0):
+              label = '0';
+              break;
+            case (value < 1000000.0):
+              label = `${Math.floor(value / 1000.0)} k`;
+              break;
+            default:
+              label = `${Math.floor(value / 1000000.0)} m`;
+          }
+          return label;
+        }
+      });
+
+
+      casesChart.addAxis("x", {
+        natural: true,
+        htmlLabels: true,
+        minorTicks: false,
+        majorTick: lineStroke,
+        majorTickStep: 7,
+        stroke: lineStroke,
+        font: "normal normal normal 9pt Avenir Next",
+        fontColor: fontColor,
+        labelFunc: (text, value, precision) => {
+          let label = '';
+          const data = casesChart.series[0].data;
+          if(data != null){
+            const val = Math.floor(Number(text));
+            const infoItem = data.find(info => info.x === val);
+            if(infoItem){
+              label = infoItem.label;
+            }
+          }
+          return label;
+        }
+      });
+
+      // DEFAULT PLOT //
+      casesChart.addPlot("default", { type: StackedColumns, gap: 2, maxBarSize: 12 });
+
+      // GRID LINES //
+      casesChart.addPlot("grid", {
+        type: Grid,
+        hMajorLines: true,
+        hMinorLines: false,
+        vMajorLines: false,
+        vMinorLines: false,
+        majorHLine: { color: "rgba(204,204,204,0.5)", width: 1.0 }
+      });
+
+      // DATA SERIES //
+      casesChart.addSeries("recovered", chartData.recovered, { stroke: { width: 0.0 }, fill: "limegreen" });
+      casesChart.addSeries("confirmed", chartData.confirmed, { stroke: { width: 0.0 }, fill: "#004575" });
+      casesChart.addSeries("deaths", chartData.deaths, { stroke: { width: 0.0 }, fill: "red" });
+
+      // TOOLTIP //
+      new ChartTooltip(casesChart, "default", {});
+
+      // RENDER CHART //
+      casesChart.render();
+
+      // RESIZE //
+      window.addEventListener('resize', () => { casesChart.resize(); });
     }
 
   });

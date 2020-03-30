@@ -107,31 +107,11 @@ body * {
 }
 
 #legend-container {
-  flex-shrink : 0;
-  flex-grow   : 0;
-  min-width   : 0;
-  min-height  : 0;
+  width  : 100%;
+  height : 100%;
 }
-
-.esri-legend {
-  /*  */
-}
-
-/*.esri-legend--card__service {
-  border-left : none;
-}*/
-
-/*.esri-legend--card__service-content {
-  flex-direction : column;
-}*/
-
-/*.esri-legend--card__section {
-  border-left   : none;
-  border-bottom : 1px solid rgba(110, 110, 110, 0.3);
-}*/
 
 #country-panel {
-  width       : 300px;
   flex-shrink : 0;
   flex-grow   : 0;
   min-width   : 0;
@@ -161,14 +141,13 @@ body * {
 }
 
 #view-panel {
-  flex-shrink    : 1;
-  flex-grow      : 1;
-  min-width      : 0;
-  min-height     : 0;
-  display        : flex;
-  flex-direction : column;
-  /*border-color   : #99b5c8;*/
-  box-shadow     : 0 1px 2px rgba(0, 0, 0, 0.3);
+  flex-shrink      : 1;
+  flex-grow        : 1;
+  min-width        : 0;
+  min-height       : 0;
+  display          : flex;
+  flex-direction   : column;
+  background-color : transparent;
 }
 
 #view-node {
@@ -177,6 +156,21 @@ body * {
   min-width        : 0;
   min-height       : 0;
   background-color : #99b5c8;
+  box-shadow       : 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+#chart-panel {
+  height      : 125px;
+  flex-shrink : 0;
+  flex-grow   : 0;
+  min-width   : 0;
+  min-height  : 0;
+  box-shadow  : 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+#chart-node {
+  width  : 100%;
+  height : 100%;
 }
 
 #user-thumb-node {
@@ -253,3 +247,14 @@ td.stat-cell > div {
   text-align : right;
 }
 
+.dijitTooltip {
+  position : absolute;
+}
+
+.dijitTooltipContainer {
+  margin-bottom    : 3px;
+  padding          : 2px 4px;
+  color            : #efefef;
+  background-color : #004575;
+  border           : solid 1px #efefef;
+}
