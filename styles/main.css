@@ -155,12 +155,12 @@ body * {
   flex-grow        : 1;
   min-width        : 0;
   min-height       : 0;
-  background-color : #99b5c8;
+  background-color : #D2E1EB;
   box-shadow       : 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 #chart-panel {
-  height      : 125px;
+  height      : 140px;
   flex-shrink : 0;
   flex-grow   : 0;
   min-width   : 0;

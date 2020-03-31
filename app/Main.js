@@ -417,7 +417,6 @@ define([
                   }
                 });
 
-
               };
 
               const timeInfo = casesLayer.timeInfo;
