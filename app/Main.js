@@ -244,9 +244,19 @@ define([
      */
     applicationReady: function(view){
 
+      const sliderContainer = document.getElementById("slider-container");
+      const confirmedCount = document.getElementById("confirmed-count");
+      const recoveredCount = document.getElementById("recovered-count");
+      const deathsCount = document.getElementById("deaths-count");
+      const allCountriesList = document.getElementById("country-list");
+      const dateLabel = document.getElementById("date-label");
 
+      const dateFormat = new Intl.DateTimeFormat('default', { year: 'numeric', month: 'long', day: 'numeric' });
+
+      // LEGEND //
       const legend = new Legend({ container: 'legend-container', view: view });
 
+      // COUNTRIES LAYER //
       const countriesLayer = view.map.layers.find(layer => {
         return (layer.title === "World Countries");
       });
@@ -258,197 +268,200 @@ define([
           const casesLayer = view.map.layers.find(layer => {
             return (layer.title === "COVID-19 Cases");
           });
+          casesLayer.opacity = 0.0;
           casesLayer.load().then(() => {
-            casesLayer.set({ copyright: "Johns Hopkins University", outFields: ["*"] });
+            casesLayer.set({
+              copyright: "Johns Hopkins University",
+              definitionExpression: '(country_region IS NOT NULL) AND (confirmed > 0)',
+              outFields: ["*"]
+            });
             //console.info('timeInfo: ', casesLayer.timeInfo);
 
             view.whenLayerView(casesLayer).then(casesLayerView => {
+              watchUtils.whenNotOnce(casesLayerView, 'updating', () => {
 
-              const sliderContainer = document.getElementById("slider-container");
-              const confirmedCount = document.getElementById("confirmed-count");
-              const recoveredCount = document.getElementById("recovered-count");
-              const deathsCount = document.getElementById("deaths-count");
-              const allCountriesList = document.getElementById("country-list");
-              const dateLabel = document.getElementById("date-label");
-              const dateFormat = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
-
-              const updateCasesChart = () => {
-
-                const countryQuery = casesLayerView.createQuery();
-                countryQuery.set({
-                  extent: view.extent,
-                  groupByFieldsForStatistics: ["date"],
-                  orderByFields: ['date ASC'],
+                //
+                // BY DAY AND COUNTRY //
+                //
+                const countryByDateQuery = casesLayer.createQuery();
+                countryByDateQuery.set({
+                  maxRecordCountFactor: 5,
+                  where: '(country_region IS NOT NULL) AND (confirmed > 0)',
+                  outFields: ['date', 'country_region', 'confirmed', 'deaths', 'recovered'],
+                  groupByFieldsForStatistics: ['country_region', 'date'],
                   outStatistics: [
-                    { statisticType: "sum", onStatisticField: "confirmed", outStatisticFieldName: "confirmed" },
-                    { statisticType: "sum", onStatisticField: "deaths", outStatisticFieldName: "deaths" },
-                    { statisticType: "sum", onStatisticField: "recovered", outStatisticFieldName: "recovered" }
+                    { statisticType: "sum", onStatisticField: "confirmed", outStatisticFieldName: "confirmed_sum" },
+                    { statisticType: "sum", onStatisticField: "deaths", outStatisticFieldName: "deaths_sum" },
+                    { statisticType: "sum", onStatisticField: "recovered", outStatisticFieldName: "recovered_sum" }
                   ]
                 });
-                casesLayer.queryFeatures(countryQuery).then(totalCountByDateFS => {
-                  //console.info("totalCountByDateFS: ", totalCountByDateFS);
+                casesLayer.queryFeatures(countryByDateQuery).then(countryByDateFS => {
 
-                  const chartData = totalCountByDateFS.features.reduce((data, feature, fetureIdx) => {
+                  const countryDataByDate = countryByDateFS.features.reduce((list, feature) => {
+                    const date = feature.attributes.date;
+                    const countryList = list.get(date) || [];
+                    countryList.push(feature.attributes);
+                    countryList.sort((a, b) => {return b.confirmed_sum - a.confirmed_sum});
+                    return list.set(date, countryList);
+                  }, new Map());
 
-                    const shortDateLabel = new Date(feature.attributes.date).toLocaleDateString('default', { month: 'short', day: 'numeric' });
-                    const longDateLabel = new Date(feature.attributes.date).toLocaleDateString('default', { month: 'long', day: 'numeric' });
+                  //
+                  // BY DAY //
+                  //
+                  const totalCountsByDateQuery = casesLayer.createQuery();
+                  totalCountsByDateQuery.set({
+                    maxRecordCountFactor: 5,
+                    where: '(country_region IS NOT NULL) AND (confirmed > 0)',
+                    outFields: ['date', 'confirmed', 'deaths', 'recovered'],
+                    groupByFieldsForStatistics: ['date'],
+                    orderByFields: ['date ASC'],
+                    outStatistics: [
+                      { statisticType: "sum", onStatisticField: "confirmed", outStatisticFieldName: "confirmed_sum" },
+                      { statisticType: "sum", onStatisticField: "deaths", outStatisticFieldName: "deaths_sum" },
+                      { statisticType: "sum", onStatisticField: "recovered", outStatisticFieldName: "recovered_sum" }
+                    ]
+                  });
+                  casesLayer.queryFeatures(totalCountsByDateQuery).then(totalCountsByDateFS => {
+                    //console.info("totalCountByDateFS: ", totalCountByDateFS);
 
-                    const tooltip = `${longDateLabel}
-                                      <br>Deaths: ${feature.attributes.deaths.toLocaleString()}                                      
-                                      <br>Confirmed: ${feature.attributes.confirmed.toLocaleString()}
-                                      <br>Recovered: ${feature.attributes.recovered.toLocaleString()}`;
+                    const chartData = totalCountsByDateFS.features.reduce((data, feature, featureIdx) => {
 
-                    const info = {
-                      x: fetureIdx,
-                      label: shortDateLabel,
-                      tooltip: tooltip
+                      const shortDateLabel = new Date(feature.attributes.date).toLocaleDateString('default', { month: 'short', day: 'numeric' });
+                      const longDateLabel = new Date(feature.attributes.date).toLocaleDateString('default', { month: 'long', day: 'numeric' });
+
+                      const tooltip = `${longDateLabel}
+                                   <br> - Deaths: ${feature.attributes.deaths_sum.toLocaleString()}                                      
+                                   <br> - Confirmed: ${feature.attributes.confirmed_sum.toLocaleString()}
+                                   <br> - Recovered: ${feature.attributes.recovered_sum.toLocaleString()}`;
+
+                      const info = {
+                        x: featureIdx,
+                        date: feature.attributes.date,
+                        label: shortDateLabel,
+                        tooltip: tooltip
+                      };
+
+                      data.confirmed.push({ ...info, y: feature.attributes.confirmed_sum });
+                      data.deaths.push({ ...info, y: feature.attributes.deaths_sum });
+                      data.recovered.push({ ...info, y: feature.attributes.recovered_sum });
+
+                      data.dates.push(feature.attributes.date);
+
+                      return data;
+                    }, { dates: [], confirmed: [], deaths: [], recovered: [] });
+
+                    // INITIALIZE CHART //
+                    this.initializeChart(chartData);
+
+                    // GET DAY INDEX //
+                    const getDayIndex = caseDate => { return chartData.dates.indexOf(caseDate.valueOf()); };
+
+                    // UPDATE CASE STATISTICS //
+                    let locationQueryHandle;
+                    const updateCaseStatsByDay = (caseDate, caseDateIdx) => {
+
+                      // TOTALS FOR THE DAY //
+                      confirmedCount.innerText = chartData.confirmed[caseDateIdx].y.toLocaleString();
+                      recoveredCount.innerText = chartData.recovered[caseDateIdx].y.toLocaleString();
+                      deathsCount.innerText = chartData.deaths[caseDateIdx].y.toLocaleString();
+
+                      const countryData = countryDataByDate.get(caseDate.valueOf());
+                      if(countryData){
+
+                        allCountriesList.innerHTML = "";
+                        countryData.forEach(stats => {
+
+                          const countryRow = domConstruct.create("tr", {}, allCountriesList);
+                          domConstruct.create("td", { innerHTML: stats.country_region }, countryRow);
+                          domConstruct.create("td", {
+                            className: "stat-cell",
+                            innerHTML: `<div>${stats.confirmed_sum ? stats.confirmed_sum.toLocaleString() : '0'}</div>`
+                          }, countryRow);
+                          domConstruct.create("td", {
+                            className: "stat-cell",
+                            innerHTML: `<div>${stats.deaths_sum ? stats.deaths_sum.toLocaleString() : '0'}</div>`
+                          }, countryRow);
+                          domConstruct.create("td", {
+                            className: "stat-cell",
+                            innerHTML: `<div>${stats.recovered_sum ? stats.recovered_sum.toLocaleString() : '0'}</div>`
+                          }, countryRow);
+
+                        });
+
+                      }
+
+                      //
+                      // TODO: FIGURE OUT HOW TO ONLY DO THIS ONCE AT STARTUP...
+                      //
+                      const locationQuery = casesLayerView.createQuery();
+                      locationQuery.set({
+                        timeExtent: view.timeExtent,
+                        where: '(country_region IS NOT NULL) AND (confirmed > 0)',
+                        outFields: [casesLayer.objectIdField],
+                        returnGeometry: true
+                      });
+                      locationQueryHandle && (!locationQueryHandle.isFulfilled()) && locationQueryHandle.cancel();
+                      locationQueryHandle = casesLayerView.queryFeatures(locationQuery).then(locationsFS => {
+                        if(locationsFS.features.length){
+                          const locations = new Multipoint({
+                            spatialReference: locationsFS.spatialReference,
+                            points: locationsFS.features.map(f => [f.geometry.x, f.geometry.y])
+                          });
+                          countriesLayerView.effect = {
+                            filter: { geometry: locations },
+                            excludedEffect: "opacity(10%)"
+                          };
+                        }
+                      }, console.error);
                     };
 
-                    data.confirmed.push({
-                      ...info,
-                      y: feature.attributes.confirmed
+                    // TIME DETAILS //
+                    const timeInfo = casesLayer.timeInfo;
+                    const animationTimeExtent = timeInfo.fullTimeExtent;
+                    const firstDate = animationTimeExtent.start;
+                    firstDate.setUTCHours(0, 0, 0, 0);
+                    animationTimeExtent.start = firstDate;
+
+                    const timeSlider = new TimeSlider({
+                      container: sliderContainer,
+                      view:view,
+                      mode: "instant",
+                      playRate: 1500,
+                      fullTimeExtent: animationTimeExtent,
+                      stops: { interval: { unit: 'days', value: 1 } },
+                      values: [firstDate]
+                    });
+                    timeSlider.watch("timeExtent", timeExtent => {
+
+                      // VIEW TIME EXTENT //
+                      //view.timeExtent = { start: timeExtent.start, end: date.add(timeExtent.start, 'hour', 22) };
+
+                      // CURRENT DAY LABEL //
+                      dateLabel.innerText = dateFormat.format(timeExtent.start);
+
+                      // DAY INDEX //
+                      const caseDayIdx = getDayIndex(timeExtent.start);
+
+                      // UPDATE CHART INDICATOR //
+                      this.updateIndicator(timeExtent.start, caseDayIdx);
+
+                      // UPDATE STATS //
+                      updateCaseStatsByDay(timeExtent.start, caseDayIdx);
+
                     });
 
-                    data.deaths.push({
-                      ...info,
-                      y: feature.attributes.deaths
+                    watchUtils.whenFalseOnce(casesLayerView, 'updating', () => {
+                      setTimeout(() => {
+                        casesLayer.opacity = 1.0;
+                        timeSlider.play();
+                      }, 2500);
                     });
 
-                    data.recovered.push({
-                      ...info,
-                      y: feature.attributes.recovered
-                    });
-
-                    return data;
-                  }, { confirmed: [], deaths: [], recovered: [] });
-
-                  this.initializeChart(chartData);
-                });
-
-              };
-              updateCasesChart();
-
-
-              const updateCaseTypeStats = () => {
-
-                const totalQuery = casesLayerView.createQuery();
-                totalQuery.set({
-                  extent: view.extent,
-                  timeExtent: view.timeExtent,
-                  outStatistics: [
-                    { statisticType: "sum", onStatisticField: "confirmed", outStatisticFieldName: "ConfirmedSum" },
-                    { statisticType: "sum", onStatisticField: "deaths", outStatisticFieldName: "DeathsSum" },
-                    { statisticType: "sum", onStatisticField: "recovered", outStatisticFieldName: "RecoveredSum" }
-                  ]
-                });
-                casesLayerView.queryFeatures(totalQuery).then(totalCountFS => {
-                  const stats = totalCountFS.features[0].attributes;
-                  confirmedCount.innerText = stats.ConfirmedSum.toLocaleString();
-                  recoveredCount.innerText = stats.RecoveredSum.toLocaleString();
-                  deathsCount.innerText = stats.DeathsSum.toLocaleString();
-                });
-
-                const countryQuery = casesLayerView.createQuery();
-                countryQuery.set({
-                  extent: view.extent,
-                  timeExtent: view.timeExtent,
-                  groupByFieldsForStatistics: ["country_region"],
-                  outStatistics: [
-                    { statisticType: "sum", onStatisticField: "confirmed", outStatisticFieldName: "ConfirmedSum" },
-                    { statisticType: "sum", onStatisticField: "deaths", outStatisticFieldName: "DeathsSum" },
-                    { statisticType: "sum", onStatisticField: "recovered", outStatisticFieldName: "RecoveredSum" }
-                  ]
-                });
-                casesLayerView.queryFeatures(countryQuery).then(totalCountFS => {
-
-                  const countryStats = totalCountFS.features.sort((a, b) => {
-                    return b.attributes.ConfirmedSum - a.attributes.ConfirmedSum;
-                  });
-
-                  allCountriesList.innerHTML = "";
-                  countryStats.forEach(countryFeature => {
-                    const stats = countryFeature.attributes;
-
-                    const countryRow = domConstruct.create("tr", {}, allCountriesList);
-                    domConstruct.create("td", { innerHTML: stats.country_region }, countryRow);
-                    domConstruct.create("td", {
-                      className: "stat-cell",
-                      innerHTML: `<div>${stats.ConfirmedSum.toLocaleString()}</div>`
-                    }, countryRow);
-                    domConstruct.create("td", {
-                      className: "stat-cell",
-                      innerHTML: `<div>${stats.DeathsSum.toLocaleString()}</div>`
-                    }, countryRow);
-                    domConstruct.create("td", {
-                      className: "stat-cell",
-                      innerHTML: `<div>${stats.RecoveredSum.toLocaleString()}</div>`
-                    }, countryRow);
-
-                    /*
-                    const countryItem = domConstruct.create("li", {}, allCountriesList);
-                    domConstruct.create("div", { className: "avenir-demi font-size-0", innerHTML: stats.Country_Region }, countryItem);
-                    const countryList = domConstruct.create("ol", { className: 'list-numbered' }, countryItem);
-                    domConstruct.create("li", { innerHTML: `Confirmed: ${stats.ConfirmedSum.toLocaleString()}` }, countryList);
-                    domConstruct.create("li", { innerHTML: `Deaths: ${stats.DeathsSum.toLocaleString()}` }, countryList);
-                    domConstruct.create("li", { innerHTML: `Recovered: ${stats.RecoveredSum.toLocaleString()}` }, countryList);
-                    */
-                  });
-
-                });
-
-                const locationQuery = casesLayerView.createQuery();
-                totalQuery.set({
-                  extent: view.extent,
-                  timeExtent: view.timeExtent,
-                  outFields: [casesLayer.objectIdField],
-                  returnGeometry: true
-                });
-                casesLayerView.queryFeatures(locationQuery).then(locationsFS => {
-                  if(locationsFS.features.length){
-                    const locations = new Multipoint({
-                      spatialReference: locationsFS.spatialReference,
-                      points: locationsFS.features.map(f => [f.geometry.x, f.geometry.y])
-                    });
-                    countriesLayerView.effect = {
-                      filter: { geometry: locations },
-                      excludedEffect: "opacity(10%)"
-                    };
-                  }
-                });
-
-              };
-
-              const timeInfo = casesLayer.timeInfo;
-              const animationTimeExtent = timeInfo.fullTimeExtent;
-              const firstDate = animationTimeExtent.start;
-
-              const timeSlider = new TimeSlider({
-                container: sliderContainer,
-                mode: "instant",
-                playRate: 1500,
-                fullTimeExtent: animationTimeExtent,
-                stops: { interval: { unit: 'days', value: 1 } },
-                values: [firstDate]
+                  }, console.error);
+                }, console.error);
               });
-              timeSlider.watch("timeExtent", timeExtent => {
-
-                view.timeExtent = {
-                  start: timeExtent.start,
-                  end: date.add(timeExtent.start, 'hour', 22)
-                };
-
-                updateCaseTypeStats();
-                dateLabel.innerText = dateFormat.format(timeExtent.start);
-              });
-
-              watchUtils.whenFalseOnce(casesLayerView, 'updating', () => {
-                setTimeout(() => { timeSlider.play(); }, 2500);
-              });
-
             });
           });
-
         });
       });
 
@@ -494,7 +507,6 @@ define([
         }
       });
 
-
       casesChart.addAxis("x", {
         natural: true,
         htmlLabels: true,
@@ -505,18 +517,41 @@ define([
         font: "normal normal normal 9pt Avenir Next",
         fontColor: fontColor,
         labelFunc: (text, value, precision) => {
-          let label = '';
-          const data = casesChart.series[0].data;
-          if(data != null){
-            const val = Math.floor(Number(text));
-            const infoItem = data.find(info => info.x === val);
-            if(infoItem){
-              label = infoItem.label;
-            }
-          }
-          return label;
+          return chartData.confirmed[Math.floor(value)].label;
         }
       });
+
+      let indicatorLabel;
+      casesChart.addPlot("currentDay", {
+        type: Indicator,
+        vertical: true,
+        lineStroke: { color: "#004575", width: 1.5 },
+        lineOutline: { width: 0 },
+        stroke: { width: 0 },
+        outline: { color: "#004575", width: 1.5 },
+        lineShadow: { width: 0 },
+        shadow: { width: 0 },
+        fill: "#f8f8f8",
+        fontColor: "#004575",
+        font: "normal normal normal 9pt Avenir Next",
+        offset: { y: 0, x: 0 },
+        values: [],
+        labelFunc: function(text, values){
+          return indicatorLabel || '';
+        }
+      });
+
+      // DAY INDEX //
+      const indicatorDateFormat = new Intl.DateTimeFormat('default', { month: 'long', day: 'numeric' });
+
+      // UPDATE INDICATOR //
+      this.updateIndicator = (caseDate, caseDayIdx) => {
+        indicatorLabel = indicatorDateFormat.format(caseDate);
+        const year_indicator = casesChart.getPlot("currentDay");
+        year_indicator.opt.values = [caseDayIdx];
+        year_indicator.dirty = true;
+        year_indicator.render();
+      };
 
       // DEFAULT PLOT //
       casesChart.addPlot("default", { type: StackedColumns, gap: 2, maxBarSize: 12 });
@@ -551,3 +586,44 @@ define([
 
 
 
+/*
+                    const countryQuery = casesLayerView.createQuery();
+                    countryQuery.set({
+                      timeExtent: view.timeExtent,
+                      outFields: ['country_region', 'confirmed', 'deaths', 'recovered'],
+                      groupByFieldsForStatistics: ["country_region"],
+                      outStatistics: [
+                        { statisticType: "sum", onStatisticField: "confirmed", outStatisticFieldName: "ConfirmedSum" },
+                        { statisticType: "sum", onStatisticField: "deaths", outStatisticFieldName: "DeathsSum" },
+                        { statisticType: "sum", onStatisticField: "recovered", outStatisticFieldName: "RecoveredSum" }
+                      ]
+                    });
+                    casesLayerView.queryFeatures(countryQuery).then(totalCountFS => {
+
+                      const countryStats = totalCountFS.features.sort((a, b) => {
+                        return b.attributes.ConfirmedSum - a.attributes.ConfirmedSum;
+                      });
+
+                      allCountriesList.innerHTML = "";
+                      countryStats.forEach(countryFeature => {
+                        const stats = countryFeature.attributes;
+
+                        const countryRow = domConstruct.create("tr", {}, allCountriesList);
+                        domConstruct.create("td", { innerHTML: stats.country_region }, countryRow);
+                        domConstruct.create("td", {
+                          className: "stat-cell",
+                          innerHTML: `<div>${stats.ConfirmedSum.toLocaleString()}</div>`
+                        }, countryRow);
+                        domConstruct.create("td", {
+                          className: "stat-cell",
+                          innerHTML: `<div>${stats.DeathsSum.toLocaleString()}</div>`
+                        }, countryRow);
+                        domConstruct.create("td", {
+                          className: "stat-cell",
+                          innerHTML: `<div>${stats.RecoveredSum.toLocaleString()}</div>`
+                        }, countryRow);
+
+                      });
+
+                    });
+                    */
